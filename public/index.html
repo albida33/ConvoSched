@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ConvoSched</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main>
+    <h1>ConvoSched</h1>
+    <p class="subtitle">Tell it what to do with your calendar.</p>
+
+    <section class="card">
+      <textarea
+        id="nl-input"
+        rows="3"
+        placeholder="e.g. Lunch with Sarah next Tuesday at noon for an hour at Cafe Luna&#10;or: Move my lunch with Sarah to 2pm&#10;or: Cancel the dentist appointment"
+      ></textarea>
+      <button id="parse-btn">Parse</button>
+      <p id="parse-error" class="error hidden"></p>
+      <p id="parse-info" class="info hidden"></p>
+    </section>
+
+    <section id="preview" class="card hidden">
+      <h2 id="preview-title">Review event</h2>
+
+      <div id="preview-fields">
+        <label>Title <input id="p-title" type="text" /></label>
+        <label>Location <input id="p-location" type="text" /></label>
+        <label>Description <textarea id="p-description" rows="2"></textarea></label>
+        <label class="checkbox"><input id="p-allday" type="checkbox" /> All day</label>
+        <label>Start <input id="p-start" type="datetime-local" /></label>
+        <label>End <input id="p-end" type="datetime-local" /></label>
+      </div>
+
+      <div id="delete-summary" class="hidden"></div>
+
+      <div class="actions">
+        <button id="save-btn">Confirm &amp; Save</button>
+        <button id="cancel-btn" class="secondary" type="button">Cancel</button>
+      </div>
+      <p id="save-error" class="error hidden"></p>
+    </section>
+
+    <section class="card">
+      <h2>Upcoming events</h2>
+      <ul id="event-list"></ul>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

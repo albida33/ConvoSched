@@ -19,7 +19,9 @@ const saveBtn = document.getElementById("save-btn");
 const cancelBtn = document.getElementById("cancel-btn");
 const saveError = document.getElementById("save-error");
 
-const eventList = document.getElementById("event-list");
+const planner = document.getElementById("planner");
+
+const PLANNER_DAYS = ["2026-07-02", "2026-07-03", "2026-07-04", "2026-07-05"];
 
 let rawInputText = "";
 let currentAction = null; // "create" | "update" | "delete"
@@ -33,7 +35,7 @@ parseBtn.addEventListener("click", async () => {
   parseInfo.classList.add("hidden");
   preview.classList.add("hidden");
   parseBtn.disabled = true;
-  parseBtn.textContent = "Parsing...";
+  parseBtn.textContent = "Submitting...";
 
   try {
     const res = await fetch(`${API_BASE}/parseEvent`, {
@@ -64,7 +66,7 @@ parseBtn.addEventListener("click", async () => {
     parseError.classList.remove("hidden");
   } finally {
     parseBtn.disabled = false;
-    parseBtn.textContent = "Parse";
+    parseBtn.textContent = "Submit";
   }
 });
 
@@ -168,16 +170,60 @@ async function loadEvents() {
   if (!res.ok) return;
   const { events } = await res.json();
 
-  eventList.innerHTML = "";
+  const byDay = new Map();
+  for (const day of PLANNER_DAYS) byDay.set(day, []);
+  const other = [];
+
   for (const ev of events) {
-    const li = document.createElement("li");
-    const start = new Date(ev.start);
-    const end = new Date(ev.end);
-    li.innerHTML = `<strong>${escapeHtml(ev.title)}</strong><br>
-      ${start.toLocaleString()} &ndash; ${end.toLocaleString()}
-      ${ev.location ? `<br><span class="muted">${escapeHtml(ev.location)}</span>` : ""}`;
-    eventList.appendChild(li);
+    const dateKey = new Date(ev.start).toLocaleDateString("en-CA");
+    if (byDay.has(dateKey)) {
+      byDay.get(dateKey).push(ev);
+    } else {
+      other.push(ev);
+    }
   }
+
+  planner.innerHTML = "";
+  for (const day of PLANNER_DAYS) {
+    planner.appendChild(renderDaySection(formatDayLabel(day), byDay.get(day)));
+  }
+  if (other.length) {
+    planner.appendChild(renderDaySection("Other", other));
+  }
+}
+
+function renderDaySection(label, events) {
+  const section = document.createElement("div");
+  section.className = "planner-day";
+
+  const heading = document.createElement("h3");
+  heading.textContent = label;
+  section.appendChild(heading);
+
+  const ul = document.createElement("ul");
+  if (events.length === 0) {
+    const li = document.createElement("li");
+    li.className = "empty";
+    li.textContent = "No events";
+    ul.appendChild(li);
+  } else {
+    for (const ev of events) {
+      const li = document.createElement("li");
+      const start = new Date(ev.start);
+      const end = new Date(ev.end);
+      li.innerHTML = `<strong>${escapeHtml(ev.title)}</strong><br>
+        ${start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} &ndash; ${end.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+        ${ev.location ? `<br><span class="muted">${escapeHtml(ev.location)}</span>` : ""}`;
+      ul.appendChild(li);
+    }
+  }
+  section.appendChild(ul);
+  return section;
+}
+
+function formatDayLabel(dateKey) {
+  const date = new Date(`${dateKey}T12:00:00`);
+  return date.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
 }
 
 function toLocalInputValue(isoString) {

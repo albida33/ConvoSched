@@ -9,15 +9,17 @@
 <body>
   <main>
     <h1>ConvoSched</h1>
-    <p class="subtitle">Tell it what to do with your calendar.</p>
+    <p class="subtitle">Add a panel from the Anime Expo schedule, or describe your own event.</p>
+
+    <div class="banner">Convention: Anime Expo 2026</div>
 
     <section class="card">
       <textarea
         id="nl-input"
         rows="3"
-        placeholder="e.g. Lunch with Sarah next Tuesday at noon for an hour at Cafe Luna&#10;or: Move my lunch with Sarah to 2pm&#10;or: Cancel the dentist appointment"
+        placeholder="Add a new event, or edit/delete exisiting event"
       ></textarea>
-      <button id="parse-btn">Parse</button>
+      <button id="parse-btn">Submit</button>
       <p id="parse-error" class="error hidden"></p>
       <p id="parse-info" class="info hidden"></p>
     </section>
@@ -44,8 +46,8 @@
     </section>
 
     <section class="card">
-      <h2>Upcoming events</h2>
-      <ul id="event-list"></ul>
+      <h2>Planner</h2>
+      <div id="planner"></div>
     </section>
   </main>
   <script src="app.js"></script>

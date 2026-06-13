@@ -80,6 +80,21 @@ button {
   cursor: pointer;
 }
 
+#parse-btn {
+  background: #dc2626;
+}
+
+.banner {
+  background: #dc2626;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+
 button:disabled {
   opacity: 0.6;
   cursor: default;
@@ -127,20 +142,42 @@ button.danger {
   margin-bottom: 0.75rem;
 }
 
-#event-list {
+.planner-day {
+  margin-bottom: 1rem;
+}
+
+.planner-day:last-child {
+  margin-bottom: 0;
+}
+
+.planner-day h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #444;
+  margin: 0 0 0.25rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #eee;
+}
+
+.planner-day ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-#event-list li {
+.planner-day li {
   padding: 0.5rem 0;
   border-bottom: 1px solid #eee;
   font-size: 0.9rem;
 }
 
-#event-list li:last-child {
+.planner-day li:last-child {
   border-bottom: none;
+}
+
+.planner-day li.empty {
+  color: #999;
+  font-style: italic;
 }
 
 .muted {

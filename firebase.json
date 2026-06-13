@@ -24,6 +24,10 @@
       {
         "source": "/api/events",
         "function": "events"
+      },
+      {
+        "source": "/api/catalog",
+        "function": "catalog"
       }
     ]
   },

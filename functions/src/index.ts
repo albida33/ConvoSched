@@ -1,12 +1,15 @@
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/v2/https";
+import { clearCatalogEvents } from "./catalog/clear";
+import { importCatalogEvents } from "./catalog/import";
+import { fetchCatalogEvents, listCatalogEvents } from "./catalog/list";
 import { createEvent } from "./events/create";
 import { deleteEvent } from "./events/delete";
 import { fetchExistingEvents, listEvents } from "./events/list";
 import { updateEvent } from "./events/update";
 import { interpretCommand } from "./parser/gemini";
-import { CommandResult, ExistingEventSummary, RawCommand } from "./parser/types";
+import { CatalogEvent, CommandResult, ExistingEventSummary, RawCommand } from "./parser/types";
 
 initializeApp();
 
@@ -15,7 +18,11 @@ const REGION = "us-central1";
 // Turn Gemini's raw classification into the response sent to the frontend,
 // falling back to "clarify" if the result is incomplete or references an
 // event that doesn't exist.
-function toCommandResult(raw: RawCommand, existingEvents: ExistingEventSummary[]): CommandResult {
+function toCommandResult(
+  raw: RawCommand,
+  existingEvents: ExistingEventSummary[],
+  catalogEvent: CatalogEvent | null
+): CommandResult {
   const clarify = (message?: string | null): CommandResult => ({
     action: "clarify",
     eventId: null,
@@ -65,8 +72,14 @@ function toCommandResult(raw: RawCommand, existingEvents: ExistingEventSummary[]
   }
 
   if (raw.action === "create") {
-    const hasRequiredFields =
-      !!raw.title && !!raw.startDateTime && !!raw.endDateTime && raw.allDay !== null;
+    const title = raw.title ?? catalogEvent?.title ?? null;
+    const description = raw.description ?? catalogEvent?.description ?? null;
+    const location = raw.location ?? catalogEvent?.location ?? null;
+    const startDateTime = raw.startDateTime ?? catalogEvent?.startDateTime ?? null;
+    const endDateTime = raw.endDateTime ?? catalogEvent?.endDateTime ?? null;
+    const allDay = raw.allDay ?? catalogEvent?.allDay ?? false;
+
+    const hasRequiredFields = !!title && !!startDateTime && !!endDateTime;
 
     if (!hasRequiredFields) {
       return clarify();
@@ -76,12 +89,12 @@ function toCommandResult(raw: RawCommand, existingEvents: ExistingEventSummary[]
       action: "create",
       eventId: null,
       preview: {
-        title: raw.title as string,
-        description: raw.description,
-        location: raw.location,
-        startDateTime: raw.startDateTime as string,
-        endDateTime: raw.endDateTime as string,
-        allDay: raw.allDay as boolean,
+        title,
+        description,
+        location,
+        startDateTime,
+        endDateTime,
+        allDay,
       },
       message: null,
     };
@@ -107,8 +120,32 @@ export const parseEvent = onRequest(
     try {
       const db = getFirestore();
       const existingEvents = await fetchExistingEvents(db);
-      const raw = await interpretCommand(text, new Date(), timeZone ?? "UTC", existingEvents);
-      res.status(200).json(toCommandResult(raw, existingEvents));
+      const catalogEvents = await fetchCatalogEvents();
+      const raw = await interpretCommand(
+        text,
+        new Date(),
+        timeZone ?? "UTC",
+        existingEvents,
+        catalogEvents
+      );
+
+      let catalogEvent: CatalogEvent | null = null;
+      if (raw.action === "create" && raw.catalogEventId) {
+        const doc = await db.collection("catalogEvents").doc(raw.catalogEventId).get();
+        if (doc.exists) {
+          const data = doc.data()!;
+          catalogEvent = {
+            title: data.title,
+            description: data.description,
+            location: data.location,
+            startDateTime: data.start.toDate().toISOString(),
+            endDateTime: data.end.toDate().toISOString(),
+            allDay: data.allDay,
+          };
+        }
+      }
+
+      res.status(200).json(toCommandResult(raw, existingEvents, catalogEvent));
     } catch (err) {
       console.error("parseEvent error", err);
       res.status(500).json({ error: "Failed to interpret command" });
@@ -138,6 +175,33 @@ export const events = onRequest(
       }
     } catch (err) {
       console.error("events error", err);
+      res.status(500).json({ error: "Internal error" });
+    }
+  }
+);
+
+// Admin endpoint for importing convention-schedule catalog events. Not
+// linked from the frontend; used to seed/reset the `catalogEvents`
+// collection.
+export const catalog = onRequest(
+  { cors: true, region: REGION, timeoutSeconds: 120 },
+  async (req, res) => {
+    try {
+      switch (req.method) {
+        case "GET":
+          await listCatalogEvents(req, res);
+          break;
+        case "POST":
+          await importCatalogEvents(req, res);
+          break;
+        case "DELETE":
+          await clearCatalogEvents(req, res);
+          break;
+        default:
+          res.status(405).json({ error: "Method not allowed" });
+      }
+    } catch (err) {
+      console.error("catalog error", err);
       res.status(500).json({ error: "Internal error" });
     }
   }
